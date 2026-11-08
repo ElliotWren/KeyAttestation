@@ -1,3 +1,7 @@
+根据原版做出一些更改所构建的版本
+by Nyxal and Gemini
+==============================
+
 Android Key Attestation Test App
 ==============================
 
