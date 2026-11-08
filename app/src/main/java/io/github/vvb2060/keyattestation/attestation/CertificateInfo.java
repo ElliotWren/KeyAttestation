@@ -2,20 +2,19 @@ package io.github.vvb2060.keyattestation.attestation;
 
 import android.util.Log;
 
-import java.security.GeneralSecurityException;
-import java.security.PublicKey;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateParsingException;
-import java.security.cert.X509Certificate;
-import java.util.List;
-
-import io.github.vvb2060.keyattestation.AppApplication;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.security.GeneralSecurityException;
+import java.security.PublicKey;
+import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
+import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
+
 import io.github.vvb2060.keyattestation.AppApplication;
 
 public class CertificateInfo {
@@ -67,38 +66,42 @@ public class CertificateInfo {
     }
 
     private void checkIssuer() {
-    var publicKey = cert.getPublicKey().getEncoded();
-    if (Arrays.equals(publicKey, googleKey)) {
-        issuer = KEY_GOOGLE;
-    } else if (Arrays.equals(publicKey, aospEcKey)) {
-        issuer = KEY_AOSP;
-    }
-    // 原有的其他判断保持不变...
+        var publicKey = cert.getPublicKey().getEncoded();
+        issuer = RootPublicKey.check(publicKey);
 
-    // 动态热更新：如果未匹配，尝试读取手机专属目录下的 roots.pem
-    if (issuer == KEY_UNKNOWN) {
-        try {
-            File extDir = AppApplication.app.getExternalFilesDir(null);
-            File customRoots = new File(extDir, "roots.pem");
-            if (customRoots.exists() && customRoots.isFile()) {
-                CertificateFactory cf = CertificateFactory.getInstance("X.509");
-                try (InputStream fis = new FileInputStream(customRoots)) {
-                    Collection<?> certList = cf.generateCertificates(fis);
-                    for (Object obj : certList) {
-                        if (obj instanceof X509Certificate) {
-                            X509Certificate rootCert = (X509Certificate) obj;
-                            if (Arrays.equals(rootCert.getPublicKey().getEncoded(), publicKey)) {
-                                issuer = KEY_GOOGLE;
-                                break;
+        if (issuer == RootPublicKey.Status.UNKNOWN) {
+            // 1. 尝试从手机本地目录加载动态 roots.pem 证书库
+            try {
+                File customRoots = new File("/sdcard/Android/data/io.github.vvb2060.keyattestation/files/roots.pem");
+                if (customRoots.exists() && customRoots.isFile()) {
+                    CertificateFactory cf = CertificateFactory.getInstance("X.509");
+                    try (InputStream fis = new FileInputStream(customRoots)) {
+                        Collection<?> certList = cf.generateCertificates(fis);
+                        for (Object obj : certList) {
+                            if (obj instanceof X509Certificate) {
+                                X509Certificate rootCert = (X509Certificate) obj;
+                                if (Arrays.equals(rootCert.getPublicKey().getEncoded(), publicKey)) {
+                                    issuer = RootPublicKey.Status.GOOGLE;
+                                    return;
+                                }
                             }
                         }
                     }
                 }
+            } catch (Exception ignored) {
             }
-        } catch (Exception ignored) {
+
+            // 2. 自动识别 Google 官方新版 RKP 根证书 (如 Key Attestation CA1)
+            try {
+                String dn = cert.getSubjectX500Principal().getName();
+                if (dn != null && dn.contains("O=Google LLC") && dn.contains("CN=Key Attestation CA")) {
+                    cert.verify(cert.getPublicKey());
+                    issuer = RootPublicKey.Status.GOOGLE;
+                }
+            } catch (Exception ignored) {
+            }
         }
     }
-}
 
     private void checkStatus(PublicKey parentKey) {
         try {
@@ -155,4 +158,3 @@ public class CertificateInfo {
         }
     }
 }
-//test
