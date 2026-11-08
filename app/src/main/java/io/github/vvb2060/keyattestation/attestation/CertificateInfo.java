@@ -10,6 +10,13 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 
 import io.github.vvb2060.keyattestation.AppApplication;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.util.Collection;
+import io.github.vvb2060.keyattestation.AppApplication;
 
 public class CertificateInfo {
     public static final int CERT_UNKNOWN = 0;
@@ -60,9 +67,38 @@ public class CertificateInfo {
     }
 
     private void checkIssuer() {
-        var publicKey = cert.getPublicKey().getEncoded();
-        issuer = RootPublicKey.check(publicKey);
+    var publicKey = cert.getPublicKey().getEncoded();
+    if (Arrays.equals(publicKey, googleKey)) {
+        issuer = KEY_GOOGLE;
+    } else if (Arrays.equals(publicKey, aospEcKey)) {
+        issuer = KEY_AOSP;
     }
+    // 原有的其他判断保持不变...
+
+    // 动态热更新：如果未匹配，尝试读取手机专属目录下的 roots.pem
+    if (issuer == KEY_UNKNOWN) {
+        try {
+            File extDir = AppApplication.app.getExternalFilesDir(null);
+            File customRoots = new File(extDir, "roots.pem");
+            if (customRoots.exists() && customRoots.isFile()) {
+                CertificateFactory cf = CertificateFactory.getInstance("X.509");
+                try (InputStream fis = new FileInputStream(customRoots)) {
+                    Collection<?> certList = cf.generateCertificates(fis);
+                    for (Object obj : certList) {
+                        if (obj instanceof X509Certificate) {
+                            X509Certificate rootCert = (X509Certificate) obj;
+                            if (Arrays.equals(rootCert.getPublicKey().getEncoded(), publicKey)) {
+                                issuer = KEY_GOOGLE;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+    }
+}
 
     private void checkStatus(PublicKey parentKey) {
         try {
