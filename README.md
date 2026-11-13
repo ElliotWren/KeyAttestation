@@ -1,7 +1,5 @@
-**根据原版做出一些更改所构建的版本**
-================================
 
-by Nyxal and Gemini.
+**by Nyxal and Gemini.**
 
 Android Key Attestation Test App
 ================================
@@ -39,6 +37,40 @@ http://www.apache.org/licenses/LICENSE-2.0
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
+Android 密钥证明（Key Attestation）测试应用
+================================
+
+本应用支持生成、保存、加载、解析及验证 Android [密钥与 ID 证明](https://source.android.com/docs/security/features/keystore/attestation)数据。
+
+本应用旨在用于自测，因此未申请任何网络权限。证书吊销数据已内置于 APK 中，不会在线更新。若系统已被入侵，则在此环境下进行解析和验证并不安全；建议将数据保存至文件，并在另一台设备上加载该文件进行验证。
+
+本应用还支持加载由其他软件生成的证书链。
+
+相关链接
+------------
+
+[官方文档](https://developer.android.com/privacy-and-security/security-key-attestation)
+
+[官方实现](https://cs.android.com/android/platform/superproject/main/+/main:frameworks/base/services/core/java/com/android/server/security/AttestationVerificationPeerDeviceVerifier.java)
+
+[授权标签 (Authorization tags)](https://cs.android.com/android/platform/superproject/main/+/main:hardware/interfaces/security/keymint/aidl/android/hardware/security/keymint/Tag.aidl)
+
+[密钥证明扩展数据架构](https://cs.android.com/android/platform/superproject/main/+/main:hardware/interfaces/security/keymint/aidl/android/hardware/security/keymint/KeyCreationResult.aidl)
+
+[RKP 文档](https://cs.android.com/android/platform/superproject/main/+/main:hardware/interfaces/security/rkp/README.md)
+
+许可协议
+-------
+
+本应用采用 Apache 2.0 许可协议（“许可协议”）；
+除非遵守该许可协议，否则不得使用本文件。您可以从以下地址获取该许可证的副本：
+
+```
+http://www.apache.org/licenses/LICENSE-2.0
+```
+
+除非适用法律另有规定或双方另有书面约定，否则根据本许可证分发的软件均按“原样”提供，不附带任何形式的明示或暗示保证或条件。
 See the License for the specific language governing permissions and
 limitations under the License.
 
